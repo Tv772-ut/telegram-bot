@@ -1,0 +1,4 @@
+aiohttp>=3.8.0
+python-telegram-bot>=20.0
+sqlalchemy>=1.4.0
+flask>=2.0.0
