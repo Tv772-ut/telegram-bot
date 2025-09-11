@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>完整账单</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #1e1a29;
+            color: #f9f6f0;
+            padding: 20px;
+        }
+        h1 { text-align: center; color: #ffcc66; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .search { margin: 20px 0; text-align: center; }
+        input[type="text"], input[type="date"] {
+            padding: 6px 10px; width: 150px; border: 1px solid #ffcc66;
+            border-radius: 4px; background: #2a2136; color: #f9f6f0;
+        }
+        button {
+            padding: 6px 12px; border: none; background: #ffcc66;
+            color: #1e1a29; font-weight: bold; border-radius: 4px; cursor: pointer;
+        }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { border: 1px solid #ffcc66; padding: 8px; text-align: center; }
+        th { background: #3a2a4d; }
+        tr:nth-child(even) { background: #2a2136; }
+        tr:nth-child(odd) { background: #3b2b4f; }
+        .collapsible {
+            background-color: #3a2a4d; color: #ffcc66; cursor: pointer;
+            padding: 10px; width: 100%; border: none; text-align: left;
+            outline: none; font-size: 16px; margin-top: 15px;
+        }
+        .active, .collapsible:hover { background-color: #5a3b6a; }
+        .content { padding: 0 10px; display: none; overflow: hidden; background-color: #2a2136; }
+        .summary { margin-top: 20px; float: left; font-size: 16px; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>完整账单</h1>
+
+    <!-- 时间范围 & 名字查询 -->
+    <div class="search">
+        <label>开始时间：</label>
+        <input type="date" id="startDate">
+        <label>结束时间：</label>
+        <input type="date" id="endDate">
+        <input type="text" placeholder="请输入名字" id="queryName">
+        <button onclick="filterRecords()">查询</button>
+    </div>
+
+    <!-- 入款表格 -->
+    <h2>入款（{{ records|selectattr('type','equalto','入款')|list|length }}笔）</h2>
+    <table id="incomeTable">
+        <tr>
+            <th>操作人</th>
+            <th>金额(RMB)</th>
+            <th>金额(USD)</th>
+            <th>汇率</th>
+            <th>操作者</th>
+            <th>时间</th>
+        </tr>
+        {% for r in records if r.type == "入款"|string %}
+        <tr>
+            <td>{{ r.user }}</td>
+            <td>{{ r.rmb|float|round(2,'floor') if r.rmb != r.rmb|int else r.rmb|int }}</td>
+            <td>{{ r.usd|float|round(2,'floor') if r.usd != r.usd|int else r.usd|int }}</td>
+            <td>{{ r.rate|float|round(2) }}</td>
+            <td>{{ r.operator }}</td>
+            <td>{{ r.time }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+
+    <!-- 下发表格 -->
+    <h2>下发（{{ records|selectattr('type','equalto','下发')|list|length }}笔）</h2>
+    <table id="payoutTable">
+        <tr>
+            <th>操作人</th>
+            <th>金额(RMB)</th>
+            <th>金额(USD)</th>
+            <th>汇率</th>
+            <th>操作者</th>
+            <th>时间</th>
+        </tr>
+        {% for r in records if r.type == "下发"|string %}
+        <tr>
+            <td>{{ r.user }}</td>
+            <td>{{ r.rmb|float|round(2,'floor') if r.rmb != r.rmb|int else r.rmb|int }}</td>
+            <td>{{ r.usd|float|round(2,'floor') if r.usd != r.usd|int else r.usd|int }}</td>
+            <td>{{ r.rate|float|round(2) }}</td>
+            <td>{{ r.operator }}</td>
+            <td>{{ r.time }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+
+    <!-- 记账分类折叠 -->
+    <button class="collapsible">记账分类</button>
+    <div class="content">
+        <h3>入款分类</h3>
+        <table>
+            <tr>
+                <th>总入</th>
+                <th>USDT</th>
+                <th>操作人</th>
+                <th>操作者</th>
+                <th>笔数</th>
+            </tr>
+            {% for r in income_summary %}
+            <tr>
+                <td>{{ r.total_rmb|float|round(2,'floor') if r.total_rmb != r.total_rmb|int else r.total_rmb|int }}</td>
+                <td>{{ r.remaining_rmb|float|round(2,'floor') if r.remaining_rmb != r.remaining_rmb|int else r.remaining_rmb|int }}</td>
+                <td>{{ r.user }}</td>
+                <td>{{ r.operator }}</td>
+                <td>{{ r.count }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+
+        <h3>下发分类</h3>
+        <table>
+            <tr>
+                <th>总下发</th>
+                <th>USDT</th>
+                <th>操作人</th>
+                <th>操作者</th>
+                <th>笔数</th>
+            </tr>
+            {% for r in payout_summary %}
+            <tr>
+                <td>{{ r.total_rmb|float|round(2,'floor') if r.total_rmb != r.total_rmb|int else r.total_rmb|int }}</td>
+                <td>{{ r.remaining_rmb|float|round(2,'floor') if r.remaining_rmb != r.remaining_rmb|int else r.remaining_rmb|int }}</td>
+                <td>{{ r.user }}</td>
+                <td>{{ r.operator }}</td>
+                <td>{{ r.count }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+
+    <!-- 左下角统计 -->
+    <div class="summary">
+        <p>总入款：{{ total_income_rmb }} | {{ total_income_usd }}U</p>
+        <p>应下发：{{ total_income_rmb }} | {{ total_income_usd }}U</p>
+        <p>已下发：{{ total_payout_rmb }} | {{ total_payout_usd }}U</p>
+        <p>待下发：{{ (total_income_rmb|float - total_payout_rmb|float)|round(2) }} | {{ (total_income_usd|float - total_payout_usd|float)|round(2) }}U</p>
+    </div>
+</div>
+
+<script>
+    // 折叠功能
+    var coll = document.getElementsByClassName("collapsible");
+    for (let i = 0; i < coll.length; i++) {
+        coll[i].addEventListener("click", function() {
+            this.classList.toggle("active");
+            var content = this.nextElementSibling;
+            content.style.display = content.style.display === "block" ? "none" : "block";
+        });
+    }
+
+    // 名字 + 时间范围查询
+    function filterRecords() {
+        let query = document.getElementById("queryName").value.trim().toLowerCase();
+        let startDate = document.getElementById("startDate").value;
+        let endDate = document.getElementById("endDate").value;
+
+        ["incomeTable","payoutTable"].forEach(function(id){
+            let table = document.getElementById(id);
+            for (let i = 1; i < table.rows.length; i++) {
+                let user = table.rows[i].cells[0].innerText.toLowerCase();
+                let time = table.rows[i].cells[5].innerText.split(" ")[0]; // YYYY-MM-DD
+                let show = true;
+                if (query && !user.includes(query)) show = false;
+                if (startDate && time < startDate) show = false;
+                if (endDate && time > endDate) show = false;
+                table.rows[i].style.display = show ? "" : "none";
+            }
+        });
+    }
+</script>
+</body>
+</html>
